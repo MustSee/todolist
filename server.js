@@ -25,7 +25,7 @@ app.use(function(req, res, next) {
 
 app.get('/', function(req, res) {
   connection.query('SELECT id, message FROM todolist', function(err, rows) {
-    console.log(rows);
+    //console.log(rows);
     req.session.todolist = rows;
     res.render('todo.ejs', {todolist : req.session.todolist});
   });
@@ -36,27 +36,39 @@ app.post('/', urlEncodedParser, function(req, res) {
     connection.query('INSERT INTO todolist SET ?', {message : req.body.newtodo},
       function (error, results, fields) {
         if (error) throw error;
-        req.session.todolist.push({message : req.body.newtodo, id: results.insertId });
+        req.session.todolist.push({message : req.body.newtodo, id: results.insertId }); // AJAX
         res.redirect('/');
-      })
+      });
     }
-})
+});
 
 app.get('/supprimer/:id', function(req, res) {
-  req.session.todolist.splice(req.params.id, 1);
-  res.redirect('/');
-})
+  connection.query('DELETE FROM todolist WHERE id = ?', [req.params.id],
+    function (error, results, fields) {
+      if (error) throw error;
+      req.session.todolist.splice(req.params.id, 1); // AJAX
+      res.redirect('/');
+    });
+});
 
 app.get('/modifier/:id', function(req, res) {
-  res.render('modify.ejs', {todomod : req.session.todolist[req.params.id], index: req.params.id});
+  connection.query('SELECT id, message FROM todolist WHERE id = ?', [req.params.id],
+    function (error, results, fields) {
+      if (error) throw error;
+      console.log(results);
+      res.render('modify.ejs', {results : results});
+    });
 });
 
 app.post('/realmod/:id', urlEncodedParser, function(req, res) {
-  console.log(req.body.modtodo);
+  //console.log(req.body.modtodo);
   if (req.body.modtodo != '') {
-    req.session.todolist.splice(req.params.id, 1, req.body.modtodo)
+    connection.query('UPDATE todolist SET message = ? WHERE id= ?', [req.body.modtodo, req.params.id],
+      function (error, results, fields) {
+        if (error) throw error;
+        res.redirect('/');
+      });
   }
-  res.redirect('/');
 });
 
 app.listen(8080);
